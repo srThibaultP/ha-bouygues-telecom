@@ -17,7 +17,7 @@ import time
 from dataclasses import dataclass
 from html.parser import HTMLParser
 from http.cookies import Morsel
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import parse_qs, urlencode, urljoin, urlparse
 
 import aiohttp
@@ -129,7 +129,10 @@ def _authorize_url(challenge: str, silent: bool) -> str:
 
 def _jwt_claims(token: str) -> dict[str, Any]:
     payload = token.split(".")[1]
-    return json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))
+    claims: dict[str, Any] = json.loads(
+        base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4))
+    )
+    return claims
 
 
 class _Browser:
@@ -173,7 +176,11 @@ class _Browser:
                 r'http-equiv="refresh" content="0;\s*URL=([^"]+)"', html
             )
             if refresh:
-                url, method, data = refresh.group(1).replace("&amp;", "&"), "GET", None
+                url, method, data = (
+                    urljoin(url, refresh.group(1).replace("&amp;", "&")),
+                    "GET",
+                    None,
+                )
                 continue
             if status >= 500:
                 raise CannotConnect(f"HTTP {status} at {url.split('?')[0]}")
@@ -202,7 +209,7 @@ async def _exchange_code(
         ) as resp:
             if resp.status != 200:
                 raise CannotConnect(f"token endpoint HTTP {resp.status}")
-            token = await resp.json(content_type=None)
+            token: dict[str, Any] = await resp.json(content_type=None)
     except (aiohttp.ClientError, TimeoutError) as err:
         raise CannotConnect(str(err)) from err
     token["expires_at"] = time.time() + int(token.get("expires_in") or 3600)
@@ -363,9 +370,10 @@ class BouyguesTelecomClient:
     async def _ensure_token(self) -> str:
         if self._token is None or self._token["expires_at"] - time.time() < 120:
             await self.async_refresh_token()
-        if self._token is None:
-            raise SessionExpired("no token")
-        return self._token["access_token"]
+        if TYPE_CHECKING:
+            assert self._token is not None
+        access_token: str = self._token["access_token"]
+        return access_token
 
     async def _get(self, path: str, retry: bool = True) -> Any:
         access_token = await self._ensure_token()
@@ -400,4 +408,54 @@ class BouyguesTelecomClient:
 
     async def async_get_consumption(self, contract_id: str) -> dict[str, Any]:
         """Current billing-period consumption of a mobile contract."""
-        return await self._get(f"/contrats/{contract_id}/suivi-conso-mobile")
+        consumption: dict[str, Any] = await self._get(
+            f"/contrats/{contract_id}/suivi-conso-mobile"
+        )
+        return consumption
+
+    async def async_get_contract_extras(self, contract_id: str) -> dict[str, Any]:
+        """Out-of-plan detail, bought data top-ups and network incidents of a line."""
+        base = f"/contrats/{contract_id}"
+        return {
+            "out_of_plan": await self._get(f"{base}/detail-usages-hors-forfait"),
+            "top_ups": await self._get(f"{base}/recharges-data-achetees"),
+            "incidents": await self._get(
+                f"/incidents-collectifs?idsContrats={contract_id}"
+            ),
+        }
+
+    async def async_get_contract_details(self, contract_id: str) -> dict[str, Any]:
+        """Slow-changing data of a line: plan price, phone renewal, options."""
+        base = f"/contrats/{contract_id}"
+        return {
+            "plan": await self._get(f"{base}/donnees-reconstituees"),
+            "renewal": await self._get(f"{base}/eligibilites-renouvellement"),
+            "options": await self._get(f"{base}/options"),
+        }
+
+    async def async_get_invoices(self) -> list[dict[str, Any]]:
+        """Invoices of every billing account, newest first."""
+        await self._ensure_token()
+        person = await self._get(f"/personnes/{self.person_id}")
+        href = next(
+            (
+                link["href"]
+                for link in person.get("_links", {}).values()
+                if isinstance(link, dict)
+                and link.get("href", "").startswith(
+                    f"/personnes/{self.person_id}/factures"
+                )
+            ),
+            None,
+        )
+        if href is None:
+            return []
+        data = await self._get(href)
+        invoices = [
+            invoice
+            for account in data.get("comptesFacturation", [])
+            for invoice in account.get("factures", [])
+        ]
+        return sorted(
+            invoices, key=lambda i: i.get("dateFacturation") or "", reverse=True
+        )

@@ -11,7 +11,7 @@ from .api import import_cookies
 from .const import CONF_COOKIES
 from .coordinator import BouyguesTelecomConfigEntry, BouyguesTelecomCoordinator
 
-PLATFORMS = [Platform.SENSOR]
+PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR]
 
 
 async def async_setup_entry(

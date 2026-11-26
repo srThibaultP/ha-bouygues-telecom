@@ -1,0 +1,132 @@
+rules:
+  # Bronze
+  action-setup:
+    status: exempt
+    comment: No service actions are provided by this integration.
+  appropriate-polling:
+    status: done
+    comment: Consumption every 30 minutes; plan, options and invoices every 6 hours.
+  brands:
+    status: done
+    comment: Icon and logo shipped in custom_components/bouygues_telecom/brand/.
+  common-modules:
+    status: done
+  config-flow-test-coverage:
+    status: done
+  config-flow:
+    status: done
+  dependency-transparency:
+    status: done
+    comment: No requirements; the API client is aiohttp code inside the integration.
+  docs-actions:
+    status: exempt
+    comment: No service actions are provided by this integration.
+  docs-high-level-description:
+    status: done
+  docs-installation-instructions:
+    status: done
+  docs-removal-instructions:
+    status: done
+  entity-event-setup:
+    status: exempt
+    comment: Entities only use the coordinator, no event subscriptions.
+  entity-unique-id:
+    status: done
+  has-entity-name:
+    status: done
+  runtime-data:
+    status: done
+  test-before-configure:
+    status: done
+    comment: The flow signs in and checks a silent token renewal before creating the entry.
+  test-before-setup:
+    status: done
+  unique-config-entry:
+    status: done
+
+  # Silver
+  action-exceptions:
+    status: exempt
+    comment: No service actions are provided by this integration.
+  config-entry-unloading:
+    status: done
+  docs-configuration-parameters:
+    status: exempt
+    comment: No options flow.
+  docs-installation-parameters:
+    status: done
+  entity-unavailable:
+    status: done
+  integration-owner:
+    status: done
+  log-when-unavailable:
+    status: done
+    comment: Handled by the DataUpdateCoordinator.
+  parallel-updates:
+    status: done
+  reauthentication-flow:
+    status: done
+  test-coverage:
+    status: done
+
+  # Gold
+  devices:
+    status: done
+  diagnostics:
+    status: done
+  discovery-update-info:
+    status: exempt
+    comment: Cloud service, nothing to discover.
+  discovery:
+    status: exempt
+    comment: Cloud service, nothing to discover.
+  docs-data-update:
+    status: done
+  docs-examples:
+    status: done
+  docs-known-limitations:
+    status: done
+  docs-supported-devices:
+    status: done
+  docs-supported-functions:
+    status: done
+  docs-troubleshooting:
+    status: done
+  docs-use-cases:
+    status: done
+  dynamic-devices:
+    status: done
+    comment: Lines added to the account get entities on the next poll.
+  entity-category:
+    status: done
+  entity-device-class:
+    status: done
+  entity-disabled-by-default:
+    status: done
+    comment: Europe/DOM roaming counters are disabled by default.
+  entity-translations:
+    status: done
+  exception-translations:
+    status: done
+  icon-translations:
+    status: done
+  reconfiguration-flow:
+    status: done
+  repair-issues:
+    status: exempt
+    comment: The only user action needed (signing in again) is the reauth flow.
+  stale-devices:
+    status: done
+    comment: Lines removed from the account lose their device on the next poll.
+
+  # Platinum
+  async-dependency:
+    status: done
+    comment: The API client is async aiohttp code.
+  inject-websession:
+    status: done
+    comment: >
+      Uses a Home Assistant client session (async_create_clientsession) with its own
+      cookie jar, since the CAS session cookies must not be shared.
+  strict-typing:
+    status: done

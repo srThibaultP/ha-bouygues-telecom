@@ -12,12 +12,16 @@
       "contact": {
         "title": "Envoi du code",
         "description": "Choisissez où Bouygues Telecom doit envoyer le code.",
-        "data": { "contact": "Recevoir le code par" }
+        "data": {
+          "contact": "Recevoir le code par"
+        }
       },
       "code": {
         "title": "Code à usage unique",
         "description": "Saisissez le code à 6 chiffres que vous venez de recevoir.",
-        "data": { "code": "Code" }
+        "data": {
+          "code": "Code"
+        }
       }
     },
     "error": {
@@ -32,32 +36,120 @@
       "wrong_account": "Il s'agit d'un autre compte Bouygues Telecom.",
       "silent_renew_failed": "Connexion réussie, mais Bouygues Telecom refuse de renouveler la session sans nouveau code : l'intégration ne peut pas interroger le compte seule.",
       "cannot_connect": "Impossible de joindre Bouygues Telecom.",
-      "unknown": "Erreur inattendue, voir les journaux."
+      "unknown": "Erreur inattendue, voir les journaux.",
+      "reconfigure_successful": "Reconnexion réussie."
     }
   },
   "selector": {
     "contact": {
-      "options": { "sms": "SMS", "email": "E-mail" }
+      "options": {
+        "sms": "SMS",
+        "email": "E-mail"
+      }
     }
   },
   "exceptions": {
     "session_expired": {
       "message": "La session Bouygues Telecom a expiré, reconnectez-vous."
+    },
+    "update_failed": {
+      "message": "Erreur lors de la récupération des données Bouygues Telecom : {error}"
     }
   },
   "entity": {
     "sensor": {
-      "data_used": { "name": "Data consommée" },
-      "data_allowance": { "name": "Enveloppe data" },
-      "data_remaining": { "name": "Data restante" },
-      "data_used_percent": { "name": "Data consommée (%)" },
-      "roaming_data_used": { "name": "Data Europe/DOM consommée" },
-      "roaming_data_allowance": { "name": "Enveloppe data Europe/DOM" },
-      "calls_used": { "name": "Appels consommés" },
-      "calls_allowance": { "name": "Forfait appels" },
-      "out_of_plan": { "name": "Hors forfait" },
-      "renewal_date": { "name": "Date de renouvellement" },
-      "last_reading": { "name": "Dernier relevé" }
+      "data_used": {
+        "name": "Data consommée"
+      },
+      "data_allowance": {
+        "name": "Enveloppe data"
+      },
+      "data_remaining": {
+        "name": "Data restante"
+      },
+      "data_used_percent": {
+        "name": "Data consommée (%)"
+      },
+      "roaming_data_used": {
+        "name": "Data Europe/DOM consommée"
+      },
+      "roaming_data_allowance": {
+        "name": "Enveloppe data Europe/DOM"
+      },
+      "calls_used": {
+        "name": "Appels consommés"
+      },
+      "calls_allowance": {
+        "name": "Forfait appels"
+      },
+      "out_of_plan": {
+        "name": "Hors forfait",
+        "state_attributes": {
+          "details": {
+            "name": "Détail"
+          }
+        }
+      },
+      "renewal_date": {
+        "name": "Date de renouvellement"
+      },
+      "last_reading": {
+        "name": "Dernier relevé"
+      },
+      "data_top_ups": {
+        "name": "Recharges data achetées"
+      },
+      "carbon_footprint": {
+        "name": "Empreinte carbone"
+      },
+      "plan_price": {
+        "name": "Prix du forfait"
+      },
+      "options": {
+        "name": "Options souscrites"
+      },
+      "phone_renewal_date": {
+        "name": "Date d'éligibilité au renouvellement du mobile"
+      },
+      "last_invoice_amount": {
+        "name": "Montant de la dernière facture"
+      },
+      "last_invoice_date": {
+        "name": "Date de la dernière facture"
+      },
+      "invoice_due_date": {
+        "name": "Échéance de la facture"
+      },
+      "balance": {
+        "name": "Solde"
+      }
+    },
+    "binary_sensor": {
+      "network_incident": {
+        "name": "Incident réseau"
+      },
+      "data_threshold_reached": {
+        "name": "Seuil data hors forfait atteint",
+        "state_attributes": {
+          "france_europe": {
+            "name": "France/Europe"
+          },
+          "rest_of_world": {
+            "name": "Reste du monde"
+          },
+          "any_zone": {
+            "name": "Toutes zones"
+          }
+        }
+      },
+      "phone_renewal_eligible": {
+        "name": "Éligible au renouvellement du mobile"
+      }
+    }
+  },
+  "device": {
+    "account": {
+      "name": "Compte Bouygues Telecom"
     }
   }
 }

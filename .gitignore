@@ -1,3 +1,6 @@
 tools/state/
 __pycache__/
 *.pyc
+.coverage
+.mypy_cache/
+.pytest_cache/

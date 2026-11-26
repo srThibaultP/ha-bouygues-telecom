@@ -1,12 +1,14 @@
 {
   "domain": "bouygues_telecom",
   "name": "Bouygues Telecom Mobile",
-  "codeowners": ["@srThibaultP"],
+  "codeowners": [
+    "@srThibaultP"
+  ],
   "config_flow": true,
   "documentation": "https://github.com/srThibaultP/ha-bouygues-telecom",
   "integration_type": "hub",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/srThibaultP/ha-bouygues-telecom/issues",
   "requirements": [],
-  "version": "0.1.0"
+  "version": "0.2.0"
 }

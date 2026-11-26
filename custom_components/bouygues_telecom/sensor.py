@@ -1,8 +1,8 @@
-"""Consumption sensors for Bouygues Telecom mobile lines."""
+"""Sensors of the Bouygues Telecom integration."""
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Any
@@ -13,204 +13,231 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import PERCENTAGE, UnitOfInformation, UnitOfTime
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
+from homeassistant.const import (
+    PERCENTAGE,
+    EntityCategory,
+    UnitOfInformation,
+    UnitOfMass,
+    UnitOfTime,
+)
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN
+from . import helpers as h
 from .coordinator import (
     BouyguesTelecomConfigEntry,
     BouyguesTelecomCoordinator,
     LineData,
 )
+from .entity import BouyguesAccountEntity, BouyguesLineEntity
 
 PARALLEL_UPDATES = 0
 
 
-def _data_counter(line: LineData, counter_type: str) -> dict[str, Any] | None:
-    return next(
-        (
-            c
-            for c in line.consumption.get("compteursConsoDATA", [])
-            if c.get("type") == counter_type
-        ),
-        None,
-    )
-
-
-def _voice_counter(line: LineData) -> dict[str, Any] | None:
-    return next(
-        (
-            c
-            for c in line.consumption.get("compteursConsoVOIX", [])
-            if c.get("type") == "PRINCIPALE"
-        ),
-        None,
-    )
-
-
-def _field(counter: dict[str, Any] | None, key: str) -> float | None:
-    if counter is None or counter.get(key) is None or counter[key] < 0:
-        return None
-    return float(counter[key])
-
-
-def _remaining(counter: dict[str, Any] | None) -> float | None:
-    used, total = (
-        _field(counter, "quantiteConsommee"),
-        _field(counter, "quantiteTotale"),
-    )
-    if used is None or total is None:
-        return None
-    return max(total - used, 0.0)
-
-
-def _percent(counter: dict[str, Any] | None) -> float | None:
-    used, total = (
-        _field(counter, "quantiteConsommee"),
-        _field(counter, "quantiteTotale"),
-    )
-    if used is None or not total:
-        return None
-    return round(used / total * 100, 1)
-
-
-def _date(value: str | None) -> date | None:
-    return dt_util.parse_date(value) if value else None
-
-
-def _paris_datetime(value: str | None) -> datetime | None:
-    if not value:
-        return None
-    parsed = dt_util.parse_datetime(value)
-    if parsed is None:
-        return None
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=dt_util.get_time_zone("Europe/Paris"))
-    return parsed
-
-
-def _period_start(line: LineData) -> datetime | None:
-    start = _date(line.consumption.get("dateDebutConso"))
-    if start is None:
-        return None
-    return datetime.combine(
-        start, datetime.min.time(), dt_util.get_time_zone("Europe/Paris")
-    )
-
-
 @dataclass(frozen=True, kw_only=True)
-class BouyguesSensorDescription(SensorEntityDescription):
-    """Sensor description with value accessors."""
+class LineSensorDescription(SensorEntityDescription):
+    """Description of a sensor of a mobile line."""
 
     value_fn: Callable[[LineData], Any]
     exists_fn: Callable[[LineData], bool] = lambda _: True
     last_reset_fn: Callable[[LineData], datetime | None] | None = None
+    attributes_fn: Callable[[LineData], Mapping[str, Any]] | None = None
 
 
-_DATA = {
+@dataclass(frozen=True, kw_only=True)
+class AccountSensorDescription(SensorEntityDescription):
+    """Description of a sensor of the customer account."""
+
+    value_fn: Callable[[dict[str, Any]], Any]
+
+
+_DATA: dict[str, Any] = {
     "device_class": SensorDeviceClass.DATA_SIZE,
     "native_unit_of_measurement": UnitOfInformation.BYTES,
     "suggested_unit_of_measurement": UnitOfInformation.GIBIBYTES,
     "suggested_display_precision": 2,
 }
+_DURATION: dict[str, Any] = {
+    "device_class": SensorDeviceClass.DURATION,
+    "native_unit_of_measurement": UnitOfTime.SECONDS,
+    "suggested_unit_of_measurement": UnitOfTime.MINUTES,
+    "suggested_display_precision": 0,
+}
+_EUR: dict[str, Any] = {
+    "device_class": SensorDeviceClass.MONETARY,
+    "native_unit_of_measurement": "EUR",
+    "suggested_display_precision": 2,
+}
 
-SENSORS: tuple[BouyguesSensorDescription, ...] = (
-    BouyguesSensorDescription(
+LINE_SENSORS: tuple[LineSensorDescription, ...] = (
+    LineSensorDescription(
         key="data_used",
         translation_key="data_used",
         state_class=SensorStateClass.TOTAL,
-        value_fn=lambda d: _field(_data_counter(d, "PRINCIPALE"), "quantiteConsommee"),
-        last_reset_fn=_period_start,
+        value_fn=lambda d: h.counter_value(h.data_counter(d, "PRINCIPALE"), "used"),
+        last_reset_fn=h.period_start,
         **_DATA,
     ),
-    BouyguesSensorDescription(
+    LineSensorDescription(
         key="data_allowance",
         translation_key="data_allowance",
-        value_fn=lambda d: _field(_data_counter(d, "PRINCIPALE"), "quantiteTotale"),
+        value_fn=lambda d: h.counter_value(h.data_counter(d, "PRINCIPALE"), "total"),
         **_DATA,
     ),
-    BouyguesSensorDescription(
+    LineSensorDescription(
         key="data_remaining",
         translation_key="data_remaining",
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda d: _remaining(_data_counter(d, "PRINCIPALE")),
+        value_fn=lambda d: h.counter_remaining(h.data_counter(d, "PRINCIPALE")),
         **_DATA,
     ),
-    BouyguesSensorDescription(
+    LineSensorDescription(
         key="data_used_percent",
         translation_key="data_used_percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda d: _percent(_data_counter(d, "PRINCIPALE")),
+        suggested_display_precision=1,
+        value_fn=lambda d: h.counter_percent(h.data_counter(d, "PRINCIPALE")),
     ),
-    BouyguesSensorDescription(
+    LineSensorDescription(
         key="roaming_data_used",
         translation_key="roaming_data_used",
         state_class=SensorStateClass.TOTAL,
-        value_fn=lambda d: _field(
-            _data_counter(d, "ADDITIONNELLE"), "quantiteConsommee"
-        ),
-        exists_fn=lambda d: _data_counter(d, "ADDITIONNELLE") is not None,
-        last_reset_fn=_period_start,
+        value_fn=lambda d: h.counter_value(h.data_counter(d, "ADDITIONNELLE"), "used"),
+        exists_fn=lambda d: h.data_counter(d, "ADDITIONNELLE") is not None,
+        last_reset_fn=h.period_start,
         entity_registry_enabled_default=False,
         **_DATA,
     ),
-    BouyguesSensorDescription(
+    LineSensorDescription(
         key="roaming_data_allowance",
         translation_key="roaming_data_allowance",
-        value_fn=lambda d: _field(_data_counter(d, "ADDITIONNELLE"), "quantiteTotale"),
-        exists_fn=lambda d: _data_counter(d, "ADDITIONNELLE") is not None,
+        value_fn=lambda d: h.counter_value(h.data_counter(d, "ADDITIONNELLE"), "total"),
+        exists_fn=lambda d: h.data_counter(d, "ADDITIONNELLE") is not None,
         entity_registry_enabled_default=False,
         **_DATA,
     ),
-    BouyguesSensorDescription(
+    LineSensorDescription(
         key="calls_used",
         translation_key="calls_used",
-        device_class=SensorDeviceClass.DURATION,
-        native_unit_of_measurement=UnitOfTime.SECONDS,
-        suggested_unit_of_measurement=UnitOfTime.MINUTES,
-        suggested_display_precision=0,
         state_class=SensorStateClass.TOTAL,
-        value_fn=lambda d: _field(_voice_counter(d), "quantiteConsommee"),
-        exists_fn=lambda d: _voice_counter(d) is not None,
-        last_reset_fn=_period_start,
+        value_fn=lambda d: h.counter_value(h.voice_counter(d), "used"),
+        exists_fn=lambda d: h.voice_counter(d) is not None,
+        last_reset_fn=h.period_start,
+        **_DURATION,
     ),
-    BouyguesSensorDescription(
+    LineSensorDescription(
         key="calls_allowance",
         translation_key="calls_allowance",
-        device_class=SensorDeviceClass.DURATION,
-        native_unit_of_measurement=UnitOfTime.SECONDS,
-        suggested_unit_of_measurement=UnitOfTime.MINUTES,
-        suggested_display_precision=0,
-        value_fn=lambda d: _field(_voice_counter(d), "quantiteTotale"),
+        value_fn=lambda d: h.counter_value(h.voice_counter(d), "total"),
         # Unlimited plans report -1.
-        exists_fn=lambda d: (_field(_voice_counter(d), "quantiteTotale") or 0) > 0,
+        exists_fn=lambda d: (h.counter_value(h.voice_counter(d), "total") or 0) > 0,
+        **_DURATION,
     ),
-    BouyguesSensorDescription(
+    LineSensorDescription(
         key="out_of_plan",
         translation_key="out_of_plan",
-        device_class=SensorDeviceClass.MONETARY,
-        native_unit_of_measurement="EUR",
-        suggested_display_precision=2,
         value_fn=lambda d: d.consumption.get("horsForfait", {}).get(
             "montantTotalHorsForfaitTTC"
         ),
+        attributes_fn=lambda d: {
+            "details": h.strip_links(d.extras["out_of_plan"].get("sections", []))
+        },
+        **_EUR,
     ),
-    BouyguesSensorDescription(
+    LineSensorDescription(
+        key="data_top_ups",
+        translation_key="data_top_ups",
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda d: len(d.extras["top_ups"].get("items", [])),
+        attributes_fn=lambda d: {
+            "top_ups": h.strip_links(d.extras["top_ups"].get("items", []))
+        },
+    ),
+    LineSensorDescription(
+        key="carbon_footprint",
+        translation_key="carbon_footprint",
+        device_class=SensorDeviceClass.WEIGHT,
+        native_unit_of_measurement=UnitOfMass.GRAMS,
+        suggested_unit_of_measurement=UnitOfMass.KILOGRAMS,
+        suggested_display_precision=2,
+        state_class=SensorStateClass.TOTAL,
+        value_fn=lambda d: d.consumption.get("impactCarbone", {}).get(
+            "equivalentGrammeCO2"
+        ),
+        exists_fn=lambda d: "impactCarbone" in d.consumption,
+        last_reset_fn=h.period_start,
+    ),
+    LineSensorDescription(
+        key="plan_price",
+        translation_key="plan_price",
+        value_fn=lambda d: h.main_offer(d).get("tarifRemiseTTC"),
+        # Secondary lines (multi-SIM...) are billed on the main plan.
+        exists_fn=lambda d: (h.main_offer(d).get("tarifTTC") or 0) > 0,
+        attributes_fn=lambda d: {
+            "plan": h.main_offer(d).get("libelleCommercial"),
+            "price_without_discount": h.main_offer(d).get("tarifTTC"),
+            "discount": h.main_offer(d).get("montantRemiseTTC"),
+        },
+        **_EUR,
+    ),
+    LineSensorDescription(
+        key="options",
+        translation_key="options",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d: len(h.subscribed_options(d)),
+        attributes_fn=lambda d: {"options": h.subscribed_options(d)},
+    ),
+    LineSensorDescription(
+        key="phone_renewal_date",
+        translation_key="phone_renewal_date",
+        device_class=SensorDeviceClass.DATE,
+        value_fn=lambda d: h.parse_date(
+            (h.renewal(d) or {}).get("dateEligibilitePrevisionnelleRenouvellement")
+        ),
+        exists_fn=lambda d: bool(
+            (h.renewal(d) or {}).get("dateEligibilitePrevisionnelleRenouvellement")
+        ),
+    ),
+    LineSensorDescription(
         key="renewal_date",
         translation_key="renewal_date",
         device_class=SensorDeviceClass.DATE,
-        value_fn=lambda d: _date(d.consumption.get("dateReinitialisation")),
+        value_fn=lambda d: h.parse_date(d.consumption.get("dateReinitialisation")),
     ),
-    BouyguesSensorDescription(
+    LineSensorDescription(
         key="last_reading",
         translation_key="last_reading",
         device_class=SensorDeviceClass.TIMESTAMP,
-        value_fn=lambda d: _paris_datetime(d.consumption.get("dateReleve")),
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d: h.paris_datetime(d.consumption.get("dateReleve")),
+    ),
+)
+
+ACCOUNT_SENSORS: tuple[AccountSensorDescription, ...] = (
+    AccountSensorDescription(
+        key="last_invoice_amount",
+        translation_key="last_invoice_amount",
+        value_fn=lambda i: i.get("mntTotFacture"),
+        **_EUR,
+    ),
+    AccountSensorDescription(
+        key="last_invoice_date",
+        translation_key="last_invoice_date",
+        device_class=SensorDeviceClass.DATE,
+        value_fn=lambda i: h.invoice_date(i.get("dateFacturation")),
+    ),
+    AccountSensorDescription(
+        key="invoice_due_date",
+        translation_key="invoice_due_date",
+        device_class=SensorDeviceClass.DATE,
+        value_fn=lambda i: h.invoice_date(i.get("dateLimitePaieFacture")),
+    ),
+    AccountSensorDescription(
+        key="balance",
+        translation_key="balance",
+        value_fn=lambda i: i.get("soldeApresFacture"),
+        **_EUR,
     ),
 )
 
@@ -220,60 +247,87 @@ async def async_setup_entry(
     entry: BouyguesTelecomConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Set up sensors for every mobile line."""
+    """Set up sensors, adding lines that appear on the account later on."""
     coordinator = entry.runtime_data
     async_add_entities(
-        BouyguesTelecomSensor(coordinator, contract_id, description)
-        for contract_id, line in coordinator.data.items()
-        for description in SENSORS
-        if description.exists_fn(line)
+        BouyguesAccountSensor(coordinator, description)
+        for description in ACCOUNT_SENSORS
     )
+    known: set[str] = set()
+
+    @callback
+    def _add_new_lines() -> None:
+        current = set(coordinator.data.lines)
+        # Forget removed lines so they get entities again if they come back.
+        known.intersection_update(current)
+        new = current - known
+        known.update(new)
+        async_add_entities(
+            BouyguesLineSensor(coordinator, contract_id, description)
+            for contract_id in new
+            for description in LINE_SENSORS
+            if description.exists_fn(coordinator.data.lines[contract_id])
+        )
+
+    _add_new_lines()
+    entry.async_on_unload(coordinator.async_add_listener(_add_new_lines))
 
 
-class BouyguesTelecomSensor(
-    CoordinatorEntity[BouyguesTelecomCoordinator], SensorEntity
-):
-    """A consumption value of one mobile line."""
+class BouyguesLineSensor(BouyguesLineEntity, SensorEntity):
+    """A sensor of one mobile line."""
 
-    _attr_has_entity_name = True
-    entity_description: BouyguesSensorDescription
+    entity_description: LineSensorDescription
 
     def __init__(
         self,
         coordinator: BouyguesTelecomCoordinator,
         contract_id: str,
-        description: BouyguesSensorDescription,
+        description: LineSensorDescription,
     ) -> None:
-        super().__init__(coordinator)
+        """Initialize the sensor."""
+        super().__init__(coordinator, contract_id, description.key)
         self.entity_description = description
-        self._contract_id = contract_id
-        self._attr_unique_id = f"{contract_id}_{description.key}"
-        contract = coordinator.data[contract_id].contract
-        number = contract.get("numeroTel") or contract_id
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, contract_id)},
-            name=(contract.get("personnalisationContrat") or {}).get("nom") or number,
-            manufacturer="Bouygues Telecom",
-            model=(contract.get("abonnement") or {}).get("libelle"),
-            serial_number=number,
-            entry_type=DeviceEntryType.SERVICE,
-            configuration_url="https://www.bouyguestelecom.fr/mon-compte",
-        )
-
-    @property
-    def available(self) -> bool:
-        return super().available and self._contract_id in self.coordinator.data
-
-    @property
-    def _line(self) -> LineData:
-        return self.coordinator.data[self._contract_id]
 
     @property
     def native_value(self) -> Any:
-        return self.entity_description.value_fn(self._line)
+        """Return the state."""
+        return self.entity_description.value_fn(self.line)
 
     @property
     def last_reset(self) -> datetime | None:
+        """Start of the billing period for counters that reset."""
         if self.entity_description.last_reset_fn is None:
             return None
-        return self.entity_description.last_reset_fn(self._line)
+        return self.entity_description.last_reset_fn(self.line)
+
+    @property
+    def extra_state_attributes(self) -> Mapping[str, Any] | None:
+        """Return extra attributes."""
+        if self.entity_description.attributes_fn is None:
+            return None
+        return self.entity_description.attributes_fn(self.line)
+
+
+class BouyguesAccountSensor(BouyguesAccountEntity, SensorEntity):
+    """A sensor of the latest invoice."""
+
+    entity_description: AccountSensorDescription
+
+    def __init__(
+        self,
+        coordinator: BouyguesTelecomCoordinator,
+        description: AccountSensorDescription,
+    ) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator, description.key)
+        self.entity_description = description
+
+    @property
+    def native_value(self) -> date | float | None:
+        """Return the state, unknown while the account has no invoice."""
+        if not self.coordinator.data.invoices:
+            return None
+        value: date | float | None = self.entity_description.value_fn(
+            self.coordinator.data.invoices[0]
+        )
+        return value

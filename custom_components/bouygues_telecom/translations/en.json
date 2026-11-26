@@ -12,12 +12,16 @@
       "contact": {
         "title": "Send the one-time code",
         "description": "Choose where Bouygues Telecom should send the code.",
-        "data": { "contact": "Send the code by" }
+        "data": {
+          "contact": "Send the code by"
+        }
       },
       "code": {
         "title": "One-time code",
         "description": "Enter the 6-digit code you just received.",
-        "data": { "code": "Code" }
+        "data": {
+          "code": "Code"
+        }
       }
     },
     "error": {
@@ -32,32 +36,120 @@
       "wrong_account": "This is a different Bouygues Telecom account.",
       "silent_renew_failed": "Signed in, but Bouygues Telecom refused to renew the session without a new code, so the integration cannot poll on its own.",
       "cannot_connect": "Could not reach Bouygues Telecom.",
-      "unknown": "Unexpected error, see the logs."
+      "unknown": "Unexpected error, see the logs.",
+      "reconfigure_successful": "Signed in again."
     }
   },
   "selector": {
     "contact": {
-      "options": { "sms": "SMS", "email": "E-mail" }
+      "options": {
+        "sms": "SMS",
+        "email": "E-mail"
+      }
     }
   },
   "exceptions": {
     "session_expired": {
       "message": "The Bouygues Telecom session expired, sign in again."
+    },
+    "update_failed": {
+      "message": "Error while fetching data from Bouygues Telecom: {error}"
     }
   },
   "entity": {
     "sensor": {
-      "data_used": { "name": "Data used" },
-      "data_allowance": { "name": "Data allowance" },
-      "data_remaining": { "name": "Data remaining" },
-      "data_used_percent": { "name": "Data used percentage" },
-      "roaming_data_used": { "name": "Europe/DOM data used" },
-      "roaming_data_allowance": { "name": "Europe/DOM data allowance" },
-      "calls_used": { "name": "Calls used" },
-      "calls_allowance": { "name": "Calls allowance" },
-      "out_of_plan": { "name": "Out-of-plan charges" },
-      "renewal_date": { "name": "Renewal date" },
-      "last_reading": { "name": "Last reading" }
+      "data_used": {
+        "name": "Data used"
+      },
+      "data_allowance": {
+        "name": "Data allowance"
+      },
+      "data_remaining": {
+        "name": "Data remaining"
+      },
+      "data_used_percent": {
+        "name": "Data used percentage"
+      },
+      "roaming_data_used": {
+        "name": "Europe/DOM data used"
+      },
+      "roaming_data_allowance": {
+        "name": "Europe/DOM data allowance"
+      },
+      "calls_used": {
+        "name": "Calls used"
+      },
+      "calls_allowance": {
+        "name": "Calls allowance"
+      },
+      "out_of_plan": {
+        "name": "Out-of-plan charges",
+        "state_attributes": {
+          "details": {
+            "name": "Details"
+          }
+        }
+      },
+      "renewal_date": {
+        "name": "Renewal date"
+      },
+      "last_reading": {
+        "name": "Last reading"
+      },
+      "data_top_ups": {
+        "name": "Data top-ups bought"
+      },
+      "carbon_footprint": {
+        "name": "Carbon footprint"
+      },
+      "plan_price": {
+        "name": "Plan price"
+      },
+      "options": {
+        "name": "Subscribed options"
+      },
+      "phone_renewal_date": {
+        "name": "Phone renewal eligibility date"
+      },
+      "last_invoice_amount": {
+        "name": "Last invoice amount"
+      },
+      "last_invoice_date": {
+        "name": "Last invoice date"
+      },
+      "invoice_due_date": {
+        "name": "Invoice due date"
+      },
+      "balance": {
+        "name": "Balance"
+      }
+    },
+    "binary_sensor": {
+      "network_incident": {
+        "name": "Network incident"
+      },
+      "data_threshold_reached": {
+        "name": "Out-of-plan data threshold reached",
+        "state_attributes": {
+          "france_europe": {
+            "name": "France/Europe"
+          },
+          "rest_of_world": {
+            "name": "Rest of the world"
+          },
+          "any_zone": {
+            "name": "Any zone"
+          }
+        }
+      },
+      "phone_renewal_eligible": {
+        "name": "Phone renewal eligible"
+      }
+    }
+  },
+  "device": {
+    "account": {
+      "name": "Bouygues Telecom account"
     }
   }
 }

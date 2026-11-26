@@ -7,6 +7,8 @@ DOMAIN = "bouygues_telecom"
 CONF_COOKIES = "cookies"
 CONF_PERSON_ID = "person_id"
 
+TRUSTED_DEVICE_COOKIE = "MFATRUSTED"
+
 CLIENT_ID = "a360.bouyguestelecom.fr"
 REDIRECT_URI = "https://www.bouyguestelecom.fr/mon-compte/all//callback.html"
 AUTHORIZE_URL = "https://oauth2.bouyguestelecom.fr/authorize"
@@ -20,3 +22,8 @@ USER_AGENT = (
 )
 
 UPDATE_INTERVAL = timedelta(minutes=30)
+# Plan price, phone renewal, options and invoices change rarely.
+DETAILS_INTERVAL = timedelta(hours=6)
+
+MANUFACTURER = "Bouygues Telecom"
+CUSTOMER_AREA_URL = "https://www.bouyguestelecom.fr/mon-compte"

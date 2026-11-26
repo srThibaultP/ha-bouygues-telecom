@@ -1,0 +1,86 @@
+{
+  "entity": {
+    "sensor": {
+      "data_used": {
+        "default": "mdi:cellphone-arrow-down"
+      },
+      "data_allowance": {
+        "default": "mdi:database"
+      },
+      "data_remaining": {
+        "default": "mdi:database-arrow-down"
+      },
+      "data_used_percent": {
+        "default": "mdi:percent"
+      },
+      "roaming_data_used": {
+        "default": "mdi:earth-arrow-right"
+      },
+      "roaming_data_allowance": {
+        "default": "mdi:earth"
+      },
+      "calls_used": {
+        "default": "mdi:phone-outgoing"
+      },
+      "calls_allowance": {
+        "default": "mdi:phone-clock"
+      },
+      "out_of_plan": {
+        "default": "mdi:cash-plus"
+      },
+      "data_top_ups": {
+        "default": "mdi:database-plus"
+      },
+      "carbon_footprint": {
+        "default": "mdi:molecule-co2"
+      },
+      "plan_price": {
+        "default": "mdi:cash-multiple"
+      },
+      "options": {
+        "default": "mdi:format-list-checks"
+      },
+      "phone_renewal_date": {
+        "default": "mdi:cellphone-arrow-down-variant"
+      },
+      "renewal_date": {
+        "default": "mdi:calendar-refresh"
+      },
+      "last_reading": {
+        "default": "mdi:clock-check-outline"
+      },
+      "last_invoice_amount": {
+        "default": "mdi:receipt-text"
+      },
+      "last_invoice_date": {
+        "default": "mdi:calendar-text"
+      },
+      "invoice_due_date": {
+        "default": "mdi:calendar-alert"
+      },
+      "balance": {
+        "default": "mdi:scale-balance"
+      }
+    },
+    "binary_sensor": {
+      "network_incident": {
+        "default": "mdi:signal-cellular-outline",
+        "state": {
+          "on": "mdi:signal-off"
+        }
+      },
+      "data_threshold_reached": {
+        "default": "mdi:speedometer",
+        "state": {
+          "on": "mdi:speedometer-slow"
+        }
+      },
+      "phone_renewal_eligible": {
+        "default": "mdi:cellphone",
+        "state": {
+          "on": "mdi:cellphone-check"
+        }
+      }
+    }
+  }
+}
