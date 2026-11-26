@@ -17,6 +17,7 @@ import hashlib
 import http.cookiejar
 import json
 import os
+import re
 import secrets
 import sys
 import time
@@ -203,24 +204,33 @@ def cmd_login():
     if "errorLogin: true" in html:
         sys.exit("identifiant ou mot de passe refusé (errorLogin) — relance pour réessayer")
 
-    for step in range(3):  # OTP (and maybe a method-choice page)
-        code, err = _code_from(url) if h.callback_url else (None, None)
-        if code or err:
+    for step in range(4):  # contact choice page, OTP page, maybe a final page
+        if h.callback_url:
             break
         forms = _forms(html)
         _describe(forms)
         fm = forms[0] if forms else None
         if not fm:
-            sys.exit("no form after password — see state/debug/2-after-password.html")
+            sys.exit(f"no form at step {step} — see state/debug/")
         fields = {i["name"]: i.get("value") or "" for i in fm["inputs"] if i.get("name")}
-        visible = [i["name"] for i in fm["inputs"]
-                   if i.get("name") and i.get("type", "text") in ("text", "tel", "number", "password")]
-        otp_field = visible[0] if visible else "token"
-        fields[otp_field] = input(f"Code SMS (champ {otp_field}) : ").strip()
+        id2name = {i.get("id"): i.get("name") for i in fm["inputs"] if i.get("id")}
+        # field the page's JS callback fills in: getElementById("x").value = ...
+        cb_ids = re.findall(r'getElementById\(["\'](\w+)["\']\)\.value\s*=', html)
+        target = next((id2name[i] for i in cb_ids if id2name.get(i)), None)
+        m_tel = re.search(r"OtpMethod:\s*{\s*tel:\s*'([^']*)'", html)
+        if m_tel:
+            fields[target or "maskedValue"] = m_tel.group(1)
+            print(f"→ envoi du code par SMS au {m_tel.group(1)}")
+        elif "OtpFinal" in html and "OtpInput" not in html:
+            pass  # confirmation page: just submit it
+        else:
+            name = target or "token"
+            fields[name] = input(f"Code SMS (champ {name}) : ").strip()
         post_url = urllib.parse.urljoin(url, fm["action"] or url)
+        op.addheaders = [hd for hd in op.addheaders if hd[0] != "Referer"] + [("Referer", url)]
         status, url, html = _open(op, h, post_url, fields)
-        _dump(f"3-after-otp-{step}.html", html)
-        print(f"after otp: HTTP {status} {url.split('?')[0]}")
+        _dump(f"3-step-{step}.html", html)
+        print(f"step {step}: HTTP {status} {url.split('?')[0]}")
 
     _save(jar)
     print("redirect chain:", h.chain)
