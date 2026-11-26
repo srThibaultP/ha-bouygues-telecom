@@ -219,15 +219,18 @@ def cmd_login():
         # field the page's JS callback fills in: getElementById("x").value = ...
         cb_ids = re.findall(r'getElementById\(["\'](\w+)["\']\)\.value\s*=', html)
         target = next((id2name[i] for i in cb_ids if id2name.get(i)), None)
-        m_tel = re.search(r"OtpMethod:\s*{\s*tel:\s*'([^']*)'", html)
+        m_tel = re.search(r"OtpMethod:\s*{\s*tel:\s*'([^']*)',\s*email:\s*'([^']*)'", html)
         if m_tel:
-            fields[target or "maskedValue"] = m_tel.group(1)
-            print(f"→ envoi du code par SMS au {m_tel.group(1)}")
+            tel, mail = m_tel.groups()
+            choice = input(f"Code par SMS ({tel}) ou e-mail ({mail}) ? [s/e] : ").strip().lower()
+            contact = mail if choice.startswith("e") and mail else tel
+            fields[target or "maskedValue"] = contact
+            print(f"→ envoi du code à {contact}")
         elif "OtpFinal" in html and "OtpInput" not in html:
             pass  # confirmation page: just submit it
         else:
             name = target or "token"
-            fields[name] = input(f"Code SMS (champ {name}) : ").strip()
+            fields[name] = input(f"Code reçu (champ {name}) : ").strip()
         post_url = urllib.parse.urljoin(url, fm["action"] or url)
         op.addheaders = [hd for hd in op.addheaders if hd[0] != "Referer"] + [("Referer", url)]
         status, url, html = _open(op, h, post_url, fields)
