@@ -212,7 +212,9 @@ def cmd_login():
         fm = forms[0] if forms else None
         if not fm:
             sys.exit(f"no form at step {step} — see state/debug/")
-        fields = {i["name"]: i.get("value") or "" for i in fm["inputs"] if i.get("name")}
+        # submit buttons: send only the "submit" event, never e.g. _eventId_regenerate
+        fields = {i["name"]: i.get("value") or "" for i in fm["inputs"]
+                  if i.get("name") and (i.get("type") != "submit" or i["name"] == "_eventId_submit")}
         id2name = {i.get("id"): i.get("name") for i in fm["inputs"] if i.get("id")}
         # field the page's JS callback fills in: getElementById("x").value = ...
         cb_ids = re.findall(r'getElementById\(["\'](\w+)["\']\)\.value\s*=', html)
@@ -231,6 +233,11 @@ def cmd_login():
         status, url, html = _open(op, h, post_url, fields)
         _dump(f"3-step-{step}.html", html)
         print(f"step {step}: HTTP {status} {url.split('?')[0]}")
+        m_ref = re.search(r'http-equiv="refresh" content="0;URL=([^"]+)"', html)
+        if m_ref and not h.callback_url:
+            nxt = m_ref.group(1).replace("&amp;", "&")
+            print("meta refresh →", nxt.split("?")[0], "authnError" in nxt and "(authnError!)" or "")
+            status, url, html = _open(op, h, nxt)
 
     _save(jar)
     print("redirect chain:", h.chain)
