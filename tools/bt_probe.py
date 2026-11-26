@@ -194,10 +194,14 @@ def cmd_login():
     data["password"] = getpass.getpass("Mot de passe : ")
     data["rememberMe"] = "true"
     post_url = urllib.parse.urljoin(url, fm["action"] or url)
+    data["submit"] = ""
+    op.addheaders += [("Origin", "https://www.mon-compte.bouyguestelecom.fr"), ("Referer", url)]
     status, url, html = _open(op, h, post_url, data)
     data["password"] = ""
     _dump("2-after-password.html", html)
     print(f"after password: HTTP {status} {url.split('?')[0]}")
+    if "errorLogin: true" in html:
+        sys.exit("identifiant ou mot de passe refusé (errorLogin) — relance pour réessayer")
 
     for step in range(3):  # OTP (and maybe a method-choice page)
         code, err = _code_from(url) if h.callback_url else (None, None)
