@@ -1,0 +1,63 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Espace client Bouygues Telecom",
+        "description": "Connectez-vous avec vos identifiants de l'espace client Bouygues Telecom. Un code à usage unique vous sera ensuite envoyé. Le mot de passe n'est pas conservé.",
+        "data": {
+          "username": "Identifiant (e-mail ou numéro de ligne)",
+          "password": "Mot de passe"
+        }
+      },
+      "contact": {
+        "title": "Envoi du code",
+        "description": "Choisissez où Bouygues Telecom doit envoyer le code.",
+        "data": { "contact": "Recevoir le code par" }
+      },
+      "code": {
+        "title": "Code à usage unique",
+        "description": "Saisissez le code à 6 chiffres que vous venez de recevoir.",
+        "data": { "code": "Code" }
+      }
+    },
+    "error": {
+      "invalid_auth": "Identifiant ou mot de passe refusé.",
+      "invalid_code": "Code erroné ou expiré.",
+      "cannot_connect": "Impossible de joindre Bouygues Telecom.",
+      "unknown": "Erreur inattendue, voir les journaux."
+    },
+    "abort": {
+      "already_configured": "Ce compte est déjà configuré.",
+      "reauth_successful": "Reconnexion réussie.",
+      "wrong_account": "Il s'agit d'un autre compte Bouygues Telecom.",
+      "silent_renew_failed": "Connexion réussie, mais Bouygues Telecom refuse de renouveler la session sans nouveau code : l'intégration ne peut pas interroger le compte seule.",
+      "cannot_connect": "Impossible de joindre Bouygues Telecom.",
+      "unknown": "Erreur inattendue, voir les journaux."
+    }
+  },
+  "selector": {
+    "contact": {
+      "options": { "sms": "SMS", "email": "E-mail" }
+    }
+  },
+  "exceptions": {
+    "session_expired": {
+      "message": "La session Bouygues Telecom a expiré, reconnectez-vous."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "data_used": { "name": "Data consommée" },
+      "data_allowance": { "name": "Enveloppe data" },
+      "data_remaining": { "name": "Data restante" },
+      "data_used_percent": { "name": "Data consommée (%)" },
+      "roaming_data_used": { "name": "Data Europe/DOM consommée" },
+      "roaming_data_allowance": { "name": "Enveloppe data Europe/DOM" },
+      "calls_used": { "name": "Appels consommés" },
+      "calls_allowance": { "name": "Forfait appels" },
+      "out_of_plan": { "name": "Hors forfait" },
+      "renewal_date": { "name": "Date de renouvellement" },
+      "last_reading": { "name": "Dernier relevé" }
+    }
+  }
+}

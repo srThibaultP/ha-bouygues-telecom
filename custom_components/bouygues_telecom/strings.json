@@ -1,0 +1,63 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Bouygues Telecom customer area",
+        "description": "Sign in with your Bouygues Telecom customer-area credentials. A one-time code will be sent to you next. The password is not stored.",
+        "data": {
+          "username": "Login (e-mail or line number)",
+          "password": "Password"
+        }
+      },
+      "contact": {
+        "title": "Send the one-time code",
+        "description": "Choose where Bouygues Telecom should send the code.",
+        "data": { "contact": "Send the code by" }
+      },
+      "code": {
+        "title": "One-time code",
+        "description": "Enter the 6-digit code you just received.",
+        "data": { "code": "Code" }
+      }
+    },
+    "error": {
+      "invalid_auth": "Login or password rejected.",
+      "invalid_code": "Wrong or expired code.",
+      "cannot_connect": "Could not reach Bouygues Telecom.",
+      "unknown": "Unexpected error, see the logs."
+    },
+    "abort": {
+      "already_configured": "This account is already configured.",
+      "reauth_successful": "Signed in again.",
+      "wrong_account": "This is a different Bouygues Telecom account.",
+      "silent_renew_failed": "Signed in, but Bouygues Telecom refused to renew the session without a new code, so the integration cannot poll on its own.",
+      "cannot_connect": "Could not reach Bouygues Telecom.",
+      "unknown": "Unexpected error, see the logs."
+    }
+  },
+  "selector": {
+    "contact": {
+      "options": { "sms": "SMS", "email": "E-mail" }
+    }
+  },
+  "exceptions": {
+    "session_expired": {
+      "message": "The Bouygues Telecom session expired, sign in again."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "data_used": { "name": "Data used" },
+      "data_allowance": { "name": "Data allowance" },
+      "data_remaining": { "name": "Data remaining" },
+      "data_used_percent": { "name": "Data used percentage" },
+      "roaming_data_used": { "name": "Europe/DOM data used" },
+      "roaming_data_allowance": { "name": "Europe/DOM data allowance" },
+      "calls_used": { "name": "Calls used" },
+      "calls_allowance": { "name": "Calls allowance" },
+      "out_of_plan": { "name": "Out-of-plan charges" },
+      "renewal_date": { "name": "Renewal date" },
+      "last_reading": { "name": "Last reading" }
+    }
+  }
+}
