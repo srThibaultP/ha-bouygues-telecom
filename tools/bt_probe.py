@@ -191,8 +191,8 @@ def cmd_login():
         _describe(forms)
         sys.exit(f"no login form at {url.split('?')[0]} (HTTP {status})")
     data = {i["name"]: i.get("value") or "" for i in fm["inputs"] if i.get("name")}
-    data["username"] = input("Identifiant (e-mail ou n°) : ").strip()
-    data["password"] = getpass.getpass("Mot de passe : ")
+    data["username"] = input("Login (e-mail or line number): ").strip()
+    data["password"] = getpass.getpass("Password: ")
     data["rememberMe"] = "true"
     post_url = urllib.parse.urljoin(url, fm["action"] or url)
     data["submit"] = ""
@@ -202,7 +202,7 @@ def cmd_login():
     _dump("2-after-password.html", html)
     print(f"after password: HTTP {status} {url.split('?')[0]}")
     if "errorLogin: true" in html:
-        sys.exit("identifiant ou mot de passe refusé (errorLogin) — relance pour réessayer")
+        sys.exit("login or password rejected (errorLogin), run again to retry")
 
     for step in range(4):  # contact choice page, OTP page, maybe a final page
         if h.callback_url:
@@ -222,15 +222,15 @@ def cmd_login():
         m_tel = re.search(r"OtpMethod:\s*{\s*tel:\s*'([^']*)',\s*email:\s*'([^']*)'", html)
         if m_tel:
             tel, mail = m_tel.groups()
-            choice = input(f"Code par SMS ({tel}) ou e-mail ({mail}) ? [s/e] : ").strip().lower()
+            choice = input(f"Send the code by SMS ({tel}) or e-mail ({mail})? [s/e]: ").strip().lower()
             contact = mail if choice.startswith("e") and mail else tel
             fields[target or "maskedValue"] = contact
-            print(f"→ envoi du code à {contact}")
+            print(f"-> sending the code to {contact}")
         elif "OtpFinal" in html and "OtpInput" not in html:
             pass  # confirmation page: just submit it
         else:
             name = target or "token"
-            fields[name] = input(f"Code reçu (champ {name}) : ").strip()
+            fields[name] = input(f"Code received (field {name}): ").strip()
         post_url = urllib.parse.urljoin(url, fm["action"] or url)
         op.addheaders = [hd for hd in op.addheaders if hd[0] != "Referer"] + [("Referer", url)]
         status, url, html = _open(op, h, post_url, fields)
@@ -286,14 +286,14 @@ def cmd_conso():
         if c.get("typeLigne") != "MOBILE":
             continue
         s = _api(tok, f"/contrats/{c['id']}/suivi-conso-mobile")
-        print(f"\ncontrat {c['id']} ({c.get('statut')}) relevé {s.get('dateReleve')} "
-              f"période {s.get('dateDebutConso')} → {s.get('dateReinitialisation')}")
+        print(f"\ncontract {c['id']} ({c.get('statut')}) read at {s.get('dateReleve')} "
+              f"period {s.get('dateDebutConso')} -> {s.get('dateReinitialisation')}")
         for k in s.get("compteursConsoDATA", []):
             print(f"  DATA {k['type']:<12} {k['quantiteConsommee']/1e9:8.2f} / "
-                  f"{k['quantiteTotale']/1e9:8.2f} Go  {k.get('libelleCompteur','')}")
+                  f"{k['quantiteTotale']/1e9:8.2f} GB  {k.get('libelleCompteur','')}")
         for k in s.get("compteursConsoVOIX", []):
-            print(f"  VOIX {k.get('libelleCompteur','')}: {k['quantiteConsommee']}s / {k['quantiteTotale']}s")
-        print(f"  hors forfait: {s.get('horsForfait', {}).get('montantTotalHorsForfaitTTC')} €")
+            print(f"  CALLS {k.get('libelleCompteur','')}: {k['quantiteConsommee']}s / {k['quantiteTotale']}s")
+        print(f"  out of plan: {s.get('horsForfait', {}).get('montantTotalHorsForfaitTTC')} EUR")
 
 
 if __name__ == "__main__":

@@ -53,28 +53,28 @@ async def login() -> None:
         if SESSION_FILE.exists():  # keeps the trusted-device cookie
             api.import_cookies(session, json.loads(SESSION_FILE.read_text()))
         flow = api.LoginFlow(session)
-        username = input("Identifiant : ").strip()
-        contacts = await flow.start(username, getpass.getpass("Mot de passe : "))
+        username = input("Login: ").strip()
+        contacts = await flow.start(username, getpass.getpass("Password: "))
         if contacts is not None:
             if contacts.phone or contacts.email:
                 choice = input(
-                    f"Code par SMS ({contacts.phone}) ou e-mail ({contacts.email}) ? [s/e] : "
+                    f"Send the code by SMS ({contacts.phone}) or e-mail ({contacts.email})? [s/e]: "
                 ).strip().lower()
                 contact = contacts.email if choice.startswith("e") else contacts.phone
                 await flow.send_code(contact)
-                print(f"code envoyé à {contact}")
+                print(f"code sent to {contact}")
             while True:
                 try:
-                    await flow.verify(input("Code reçu : "))
+                    await flow.verify(input("Code received: "))
                     break
                 except api.InvalidCode:
-                    print("code refusé, réessaie")
+                    print("code rejected, try again")
         _save(session)
-        print("connecté sans code" if contacts is None else "connecté avec code", "— session enregistrée; test du renouvellement silencieux…")
+        print("signed in without a code" if contacts is None else "signed in with a code", "- session saved; testing silent renewal...")
         client = api.BouyguesTelecomClient(session)
         await client.async_refresh_token()
         _save(session)
-        print("renouvellement silencieux OK")
+        print("silent renewal OK")
 
 
 async def conso(print_lines: bool = True) -> None:
@@ -82,12 +82,12 @@ async def conso(print_lines: bool = True) -> None:
         api.import_cookies(session, json.loads(SESSION_FILE.read_text()))
         client = api.BouyguesTelecomClient(session)
         await client.async_refresh_token()
-        print("renouvellement silencieux OK")
+        print("silent renewal OK")
         if print_lines:
             for c in await client.async_get_mobile_contracts():
                 s = await client.async_get_consumption(str(c["id"]))
                 name = (c.get("personnalisationContrat") or {}).get("nom") or c["id"]
-                print(f"\n{name} — {c['abonnement']['libelle']} (relevé {s.get('dateReleve')})")
+                print(f"\n{name} - {c['abonnement']['libelle']} (read at {s.get('dateReleve')})")
                 for k in s.get("compteursConsoDATA", []):
                     print(f"  data {k['type']:<13} {k['quantiteConsommee'] / 2**30:7.2f} / "
                           f"{k['quantiteTotale'] / 2**30:7.2f} Gio")
