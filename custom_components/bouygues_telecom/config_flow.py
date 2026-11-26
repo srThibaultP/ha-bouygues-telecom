@@ -47,6 +47,7 @@ class BouyguesTelecomConfigFlow(ConfigFlow, domain=DOMAIN):
         self._session: aiohttp.ClientSession | None = None
         self._login: LoginFlow | None = None
         self._username = ""
+        self._password = ""
         self._contacts: dict[str, str] = {}
 
     async def async_step_user(
@@ -56,6 +57,7 @@ class BouyguesTelecomConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         if user_input is not None:
             self._username = user_input[CONF_USERNAME].strip()
+            self._password = user_input[CONF_PASSWORD]
             self._session = async_create_clientsession(
                 self.hass, cookie_jar=aiohttp.CookieJar()
             )
@@ -184,6 +186,7 @@ class BouyguesTelecomConfigFlow(ConfigFlow, domain=DOMAIN):
         await self.async_set_unique_id(client.person_id)
         data = {
             CONF_USERNAME: self._username,
+            CONF_PASSWORD: self._password,
             CONF_PERSON_ID: client.person_id,
             CONF_COOKIES: export_cookies(self._session),
         }

@@ -8,6 +8,7 @@ from typing import Any
 
 import aiohttp
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -15,6 +16,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from .api import (
     BouyguesTelecomClient,
     BouyguesTelecomError,
+    InvalidAuth,
     SessionExpired,
     export_cookies,
 )
@@ -52,7 +54,9 @@ class BouyguesTelecomCoordinator(DataUpdateCoordinator[dict[str, LineData]]):
             update_interval=UPDATE_INTERVAL,
         )
         self.session = session
-        self.client = BouyguesTelecomClient(session)
+        self.client = BouyguesTelecomClient(
+            session, entry.data[CONF_USERNAME], entry.data.get(CONF_PASSWORD)
+        )
 
     async def _async_update_data(self) -> dict[str, LineData]:
         try:
@@ -63,7 +67,7 @@ class BouyguesTelecomCoordinator(DataUpdateCoordinator[dict[str, LineData]]):
                 )
                 for c in contracts
             }
-        except SessionExpired as err:
+        except (SessionExpired, InvalidAuth) as err:
             raise ConfigEntryAuthFailed(
                 translation_domain=DOMAIN, translation_key="session_expired"
             ) from err

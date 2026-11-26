@@ -36,6 +36,7 @@ from .const import (
 _CALLBACK_PREFIX = REDIRECT_URI.split("//callback")[0]
 _TIMEOUT = aiohttp.ClientTimeout(total=30)
 _MAX_HOPS = 15
+_FORWARD_EVENTS = ("_eventId_submit", "_eventId_proceed")
 
 
 class BouyguesTelecomError(Exception):
@@ -56,6 +57,10 @@ class InvalidCode(BouyguesTelecomError):
 
 class SessionExpired(BouyguesTelecomError):
     """The saved CAS session can no longer mint tokens; a new login is needed."""
+
+
+class CodeRequired(SessionExpired):
+    """A password login was attempted but CAS asks for a one-time code."""
 
 
 @dataclass
@@ -92,12 +97,11 @@ def _first_form(html: str) -> dict[str, Any] | None:
 
 
 def _form_fields(form: dict[str, Any]) -> dict[str, str]:
-    # Only the "submit" event button: sending _eventId_regenerate too makes CAS resend the code.
+    # Never send _eventId_regenerate along: CAS would resend the code instead of checking it.
     return {
         i["name"]: i.get("value") or ""
         for i in form["inputs"]
-        if i.get("name")
-        and (i.get("type") != "submit" or i["name"] == "_eventId_submit")
+        if i.get("name") and (i.get("type") != "submit" or i["name"] in _FORWARD_EVENTS)
     }
 
 
@@ -305,6 +309,17 @@ class LoginFlow:
         self._url, self._html, callback = await self._browser.go(
             target, fields, referer=url
         )
+        # "Trusted device" confirmation after a valid code: just proceed.
+        for _ in range(2):
+            if callback or "OtpFinal" not in self._html:
+                break
+            final_form = _first_form(self._html)
+            if final_form is None:
+                break
+            target = urljoin(self._url, final_form["action"] or self._url)
+            self._url, self._html, callback = await self._browser.go(
+                target, _form_fields(final_form), referer=self._url
+            )
         if callback:
             self.token = await _exchange_code(self._session, callback, self._verifier)
 
@@ -313,11 +328,15 @@ class BouyguesTelecomClient:
     """Token management and API calls on top of a logged-in CAS session."""
 
     def __init__(
-        self, session: aiohttp.ClientSession, token: dict[str, Any] | None = None
+        self,
+        session: aiohttp.ClientSession,
+        username: str | None = None,
+        password: str | None = None,
     ) -> None:
         self._session = session
         self._browser = _Browser(session)
-        self._token = token
+        self._credentials = (username, password) if username and password else None
+        self._token: dict[str, Any] | None = None
 
     @property
     def person_id(self) -> str:
@@ -330,9 +349,16 @@ class BouyguesTelecomClient:
         """Mint a new access token from the CAS session (no user interaction)."""
         verifier, challenge = _pkce()
         _, _, callback = await self._browser.go(_authorize_url(challenge, silent=True))
-        if callback is None:
-            raise SessionExpired("login page returned")
-        self._token = await _exchange_code(self._session, callback, verifier)
+        if callback is not None and "code" in parse_qs(urlparse(callback).query):
+            self._token = await _exchange_code(self._session, callback, verifier)
+            return
+        if self._credentials is None:
+            raise SessionExpired("CAS session expired")
+        # The trusted-device cookie (MFATRUSTED, ~1 year) lets a password login skip the code.
+        login = LoginFlow(self._session)
+        if await login.start(*self._credentials) is not None or login.token is None:
+            raise CodeRequired("one-time code required")
+        self._token = login.token
 
     async def _ensure_token(self) -> str:
         if self._token is None or self._token["expires_at"] - time.time() < 120:

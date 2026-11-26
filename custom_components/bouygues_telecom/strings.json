@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Bouygues Telecom customer area",
-        "description": "Sign in with your Bouygues Telecom customer-area credentials. A one-time code will be sent to you next. The password is not stored.",
+        "description": "Sign in with your Bouygues Telecom customer-area credentials. A one-time code is sent the first time. The password is kept so the integration can sign in again on its own; Bouygues Telecom then trusts this Home Assistant for a year and does not ask for a new code.",
         "data": {
           "username": "Login (e-mail or line number)",
           "password": "Password"

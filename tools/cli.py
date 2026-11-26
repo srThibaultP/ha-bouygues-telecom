@@ -50,6 +50,8 @@ def _save(session: aiohttp.ClientSession) -> None:
 
 async def login() -> None:
     async with aiohttp.ClientSession(cookie_jar=aiohttp.CookieJar()) as session:
+        if SESSION_FILE.exists():  # keeps the trusted-device cookie
+            api.import_cookies(session, json.loads(SESSION_FILE.read_text()))
         flow = api.LoginFlow(session)
         username = input("Identifiant : ").strip()
         contacts = await flow.start(username, getpass.getpass("Mot de passe : "))
@@ -68,7 +70,7 @@ async def login() -> None:
                 except api.InvalidCode:
                     print("code refusé, réessaie")
         _save(session)
-        print("connecté, session enregistrée; test du renouvellement silencieux…")
+        print("connecté sans code" if contacts is None else "connecté avec code", "— session enregistrée; test du renouvellement silencieux…")
         client = api.BouyguesTelecomClient(session)
         await client.async_refresh_token()
         _save(session)
