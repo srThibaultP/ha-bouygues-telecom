@@ -19,6 +19,7 @@ from homeassistant.util import dt as dt_util
 from .api import (
     BouyguesTelecomClient,
     BouyguesTelecomError,
+    CannotConnect,
     InvalidAuth,
     SessionExpired,
     export_cookies,
@@ -117,10 +118,23 @@ class BouyguesTelecomCoordinator(DataUpdateCoordinator[AccountData]):
         lines = {}
         for contract in contracts:
             contract_id = str(contract["id"])
+            try:
+                consumption = await self.client.async_get_consumption(contract_id)
+                extras = await self.client.async_get_contract_extras(contract_id)
+            except CannotConnect as err:
+                # A per-line endpoint often answers 503 for a few minutes; keep the
+                # last reading of that line instead of making every entity unavailable.
+                previous = self.data.lines.get(contract_id) if self.data else None
+                if previous is None:
+                    raise
+                _LOGGER.warning(
+                    "Keeping the previous data of line %s: %s", contract_id, err
+                )
+                consumption, extras = previous.consumption, previous.extras
             lines[contract_id] = LineData(
                 contract=contract,
-                consumption=await self.client.async_get_consumption(contract_id),
-                extras=await self.client.async_get_contract_extras(contract_id),
+                consumption=consumption,
+                extras=extras,
                 details=self._details[contract_id],
             )
         return AccountData(lines=lines, invoices=self._invoices)

@@ -94,6 +94,31 @@ async def test_update_error_marks_unavailable(
     assert hass.states.get(MAIN_DATA_USED).state != "unavailable"
 
 
+async def test_line_error_keeps_previous_data(
+    hass: HomeAssistant,
+    init_integration: MockConfigEntry,
+    mock_client: MagicMock,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """A transient error on one line keeps its last reading available."""
+    before = hass.states.get(MAIN_DATA_USED).state
+    mock_client.async_get_consumption.side_effect = CannotConnect("HTTP 503")
+    await _tick(hass, freezer)
+    assert hass.states.get(MAIN_DATA_USED).state == before
+    assert hass.states.get(SECONDARY_DATA_USED).state != "unavailable"
+
+
+async def test_line_error_without_previous_data(
+    hass: HomeAssistant, mock_config_entry: MockConfigEntry, mock_client: MagicMock
+) -> None:
+    """Without a previous reading, a line error still fails the refresh."""
+    mock_client.async_get_consumption.side_effect = CannotConnect("HTTP 503")
+    mock_config_entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
+    assert mock_config_entry.state is ConfigEntryState.SETUP_RETRY
+
+
 async def test_details_are_cached(
     hass: HomeAssistant,
     init_integration: MockConfigEntry,

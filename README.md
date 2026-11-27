@@ -75,6 +75,7 @@ Use **Reconfigure** on the integration to change the login or password.
 - Consumption, out-of-plan details, top-ups and incidents: every **30 minutes**.
 - Plan price, options, phone renewal and invoices: every **6 hours** (and when a line is added).
 - Bouygues Telecom itself refreshes the counters a few times a day; the *Last reading* sensor tells when.
+- If a line's endpoint briefly fails (the API sometimes answers HTTP 503 for a few minutes), that line keeps its last reading until the next poll instead of making every entity unavailable.
 
 ### Authentication
 
