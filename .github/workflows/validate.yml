@@ -42,7 +42,8 @@ jobs:
           uv pip install -e ./ha-core -e ./ha-core/packages/pytest-homeassistant \
             pytest-cov syrupy mypy
           # The components loaded by the tests import their own requirements
-          uv pip install $(python3 .github/requirements.py)
+          reqs="$(python3 .github/requirements.py)"
+          if [ -n "$reqs" ]; then uv pip install $reqs; fi
       - name: Tests (100% coverage)
         run: uv run --no-sync pytest --cov -p no:cacheprovider
       - name: Strict typing
