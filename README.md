@@ -51,9 +51,9 @@ Consumer (B&You / Bouygues Telecom) accounts that can sign in to [the customer a
 
 ## Installation
 
-### HACS
+### Marketplace
 
-1. HACS → ⋮ → **Custom repositories** → add this repository as an *Integration*.
+1. Marketplace → ⋮ → **Custom repositories** → add this repository as an *Integration*.
 2. Install **Bouygues Telecom Mobile** and restart Home Assistant.
 
 ### Manual
@@ -102,7 +102,7 @@ The login, password and session cookies are stored in the config entry, like mos
 
 ## Removal
 
-Settings → Devices & services → Bouygues Telecom Mobile → ⋮ → **Delete**, then remove the folder (or uninstall it from HACS) and restart.
+Settings → Devices & services → Bouygues Telecom Mobile → ⋮ → **Delete**, then remove the folder (or uninstall it from the Marketplace) and restart.
 
 ## Development
 
