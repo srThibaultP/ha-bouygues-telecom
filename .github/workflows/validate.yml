@@ -10,6 +10,8 @@ env:
 
 jobs:
   hacs:
+    # The HACS action only validates public repositories.
+    if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-latest
     steps:
       - uses: hacs/action@main
@@ -37,7 +39,7 @@ jobs:
       - name: Install Home Assistant and test helpers
         run: |
           uv venv
-          uv pip install -e ./ha-core -e ./ha-core/packages/pytest-home-assistant \
+          uv pip install -e ./ha-core -e ./ha-core/packages/pytest-homeassistant \
             pytest-cov syrupy mypy
           # The components loaded by the tests import their own requirements
           uv pip install $(python3 .github/requirements.py)
